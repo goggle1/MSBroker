@@ -12,6 +12,7 @@ class check_item:
     get     = ''
     result  = ''
     func    = None
+    
     def __init__(self, name, cmd, status, output, expect, get, result, func):
         self.name = name
         self.cmd = cmd
