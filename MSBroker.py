@@ -1,4 +1,6 @@
-#!/home/admin/broker_project/build_tools/python272/bin/python
+#!/usr/local/bin/python
+'''#!/home/admin/broker_project/build_tools/python272/bin/python
+'''
 #-*- coding:utf-8 -*-
 
 from twisted.web import http
@@ -25,23 +27,26 @@ class MyRequestHandler(http.Request):
     def __load_module(self):
         flag = 0
         try:
+            print 'client: ', self.getClient()
+            print 'uri: ', self.uri            
+            
             if 'cmd' not in self.args:
-                #print "no cmd: no module name"
-                raise RecordReasonException( "no cmd")
+                #print "no cmd: no module name"        
+                raise RecordReasonException( 'no cmd: ' + self.uri)
             module_path = 'module.' + self.path.strip('/') + '.' + self.args['cmd'][0]
-            print "module_path:",module_path
+            print "module_path:", module_path
 
             if module_path in sys.modules:
                 print module_path
                 print "del original module..."
                 del sys.modules[module_path]
             module = __import__(module_path)
-            module_obj_0 = getattr(module,self.path.strip('/'))
-            module_obj_1 = getattr(module_obj_0,self.args['cmd'][0])
-            Module_Class_obj = getattr(module_obj_1,self.args['cmd'][0])()
+            module_obj_0 = getattr(module, self.path.strip('/'))
+            module_obj_1 = getattr(module_obj_0, self.args['cmd'][0])
+            Module_Class_obj = getattr(module_obj_1, self.args['cmd'][0])()
 
             print "Module_Operate_obj.start ..."
-            if 0!=Module_Class_obj.start(self):
+            if 0 != Module_Class_obj.start(self):
                 raise Exception()
 
         except RecordReasonException,x:
@@ -69,7 +74,7 @@ class MyHttpFactory(http.HTTPFactory):
 
 if __name__=="__main__":
     from twisted.internet import reactor
-    reactor.listenTCP(11000,MyHttpFactory())
+    reactor.listenTCP(11000, MyHttpFactory())
     print 'running ...'
     reactor.run()
     print 'over'
