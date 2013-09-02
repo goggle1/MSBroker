@@ -34,7 +34,8 @@ class check:
     NAME_7 = 'speed'
     NAME_8 = 'thread'
     NAME_9 = 'disk'
-    NAME_10 = 'log'    
+    NAME_10 = 'log'
+    NAME_11 = 'space'    
     
     CMD_1 = 'ps -ef|grep mediaserver'
     CMD_2 = 'netstat -tlnp'
@@ -46,6 +47,7 @@ class check:
     CMD_8 = 'cat /home/mediaserver/etc/ms.conf | grep accepter_thread_num'
     CMD_9 = 'cat /home/mediaserver/etc/ms.conf | grep service_devices | grep -v service_devices_reload_interval'
     CMD_10 = 'ls -l /root/clean_log.sh 2>/dev/null | wc -l; ls -l /home/mediaserver/log/peer_????????.log 2>/dev/null | wc -l; ls -l /home/mediaserver/log/peer_hvod_????????.log 2>/dev/null | wc -l'
+    CMD_11 = "df -ah | awk '{if(($5==\"100%\") && (($6==\"/\") || ($6==\"/home\"))) print $0}'"  
     
 #     items = [ \
 #                check_item(NAME_1, CMD_1, 0, '', '', '', '', check_cmd_1), \
@@ -513,34 +515,17 @@ class check:
         
         return 0
     
+    
+    def check_cmd_11(self, item):   
+        item.expect = ''     
+        item.get = item.output
         
-    def check_output(self, item):
-        result = 0
-        try:
-            if(cmp(item.cmd, self.CMD_1) == 0):
-                self.check_cmd_1(item)
-            elif(cmp(item.cmd, self.CMD_2) == 0):
-                self.check_cmd_2(item)
-            elif(cmp(item.cmd, self.CMD_3) == 0):
-                self.check_cmd_3(item)
-            elif(cmp(item.cmd, self.CMD_4) == 0):
-                self.check_cmd_4(item)
-            elif(cmp(item.cmd, self.CMD_5) == 0):
-                self.check_cmd_5(item)
-            elif(cmp(item.cmd, self.CMD_6) == 0):
-                self.check_cmd_6(item)
-            elif(cmp(item.cmd, self.CMD_7) == 0):
-                self.check_cmd_7(item)
-            elif(cmp(item.cmd, self.CMD_8) == 0):
-                self.check_cmd_8(item)
-            elif(cmp(item.cmd, self.CMD_9) == 0):
-                self.check_cmd_9(item)
-            else:
-                item.result = 'unknown cmd'
-        except:
-            result = -1
-        finally:
-            return result
+        item.result = 'ok'
+           
+        if(len(item.get) != 0):
+            item.result = 'error'
+        
+        return 0
         
     
     items = [ \
@@ -554,6 +539,7 @@ class check:
                check_item(NAME_8, CMD_8, 0, '', '', '', '', check_cmd_8), \
                check_item(NAME_9, CMD_9, 0, '', '', '', '', check_cmd_9), \
                check_item(NAME_10, CMD_10, 0, '', '', '', '', check_cmd_10), \
+               check_item(NAME_11, CMD_11, 0, '', '', '', '', check_cmd_11), \
               ]
     
     def check_item(self, item):
