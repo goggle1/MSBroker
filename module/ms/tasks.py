@@ -16,8 +16,9 @@ class ms_task:
     infohashid  = ''
     state       = 0
     
-    files_num   = 0
-    files_list  = ''
+    file_num   = 0
+    file_list  = ''
+    status      = '*'
     
     def __init__(self, taskname, protocol, uploadrate, peernumber, process, infohashid, state):
         self.taskname   = taskname
@@ -33,16 +34,17 @@ class disk_file:
     #/media1/36527DB56AD93746F6DE7EA0F6F6A81188DE424A.dat
     file_name   = ''
     file_path   = ''
-    hash        = ''
+    file_prefix = ''
     full_name   = ''
     
     task_num    = 0
+    task_list   = ''
     
     def __init__(self, name, path):
         self.file_name  = name
         self.file_path  = path
         fields = name.split('.')
-        self.hash = fields[0]
+        self.file_prefix = fields[0]
         self.full_name = os.path.join(self.file_path, self.file_name)
         
     
@@ -118,11 +120,10 @@ class tasks:
             self.get_dir_files(disk)
             
         return 0
+    
         
-    def query_file_by_hash(self, hash):
-        num = 0
-        output = ''
-        url =   'http://127.0.0.1:6261/macross/?cmd=querytaskstate&infohashid=%s' % (hash)
+    def query_file_by_hash(self, task):        
+        url =   'http://127.0.0.1:6261/macross/?cmd=querytaskstate&infohashid=%s' % (task.infohashid)
         #return=ok
         #result=1369126657|0|0|1|/media2/36527DB56AD93746F6DE7EA0F6F6A81188DE424A.dat|fsp|100
         f = urllib2.urlopen(url)
@@ -131,7 +132,7 @@ class tasks:
 
         lines = output.split('\n')
         if(len(lines) < 2):
-            return (num, output)
+            return 0
 
         #print 'lines[0]: ', lines[0]
         expect_str = 'return=ok'
@@ -141,65 +142,51 @@ class tasks:
         #print 'expect_len: %d' % (expect_len)
         #print 'get_len: %d' % (get_len)        
         if(get_len < expect_len):
-            return (num, output)
+            return 0
         if(get_len >= expect_len) and (cmp(get_str[0:expect_len], expect_str) != 0):
-            return (num, output)
+            return 0
         
         result = lines[1]
         #print 'result: ', result
         results = result.split('=')
         if(len(results) < 2):
-            return (num, output)
+            return 0
         
         task_state = results[1]
         fields = task_state.split('|')
         if(len(fields) < 7):
-            return (num, output)
+            return 0
         
         file_path = fields[4]
         if(os.path.isfile(file_path)):
-            num = 1
-            output = file_path
+            task.file_num = 1
+            task.file_list = file_path
             
-        return (num, output)     
+        return task.file_num    
         
             
-    def find_files_by_hash(self, hash):
-        num = 0
-        output = ''
+    def find_files_by_hash(self, task):        
         for one_file in self.file_list:
-            if(one_file.hash == hash):
-                if(num > 0):
-                    output += '|'
-                output += one_file.full_name
-                num += 1 
-                
-        if(num == 0):
-            (num, output) = self.query_file_by_hash(hash)
+            if(one_file.file_prefix == task.infohashid):  
+                if(one_file.task_num > 0):
+                    one_file.task_list += '|'
+                one_file.task_list += task.infohashid
+                one_file.task_num += 1              
+                if(task.file_num > 0):
+                    task.file_list += '|'
+                task.file_list += one_file.full_name
+                task.file_num += 1
                        
-        return (num, output)
-    
-    def find_tasks_by_hash(self, hash):
-        num = 0
-        for one_task in self.task_list:
-            if(one_task.infohashid == hash):
-                num += 1
-                break                 
-        return num
+        return task.file_num
     
     
     def tasks_minus_files(self):
         for task in self.task_list:
-            (num, output) = self.find_files_by_hash(task.infohashid)
-            task.file_num = num
-            task.file_list = output
-            
-        return 0
-    
-    def files_minus_tasks(self):
-        for one_file in self.file_list:
-            num = self.find_tasks_by_hash(one_file.hash)
-            one_file.task_num = num
+            num = self.find_files_by_hash(task)
+            if(num != 1):
+                task.status = '?'
+            if(num == 0):
+                num = self.query_file_by_hash(task)
             
         return 0
     
@@ -214,7 +201,7 @@ class tasks:
         self.get_ms_tasks()
         self.get_disk_files()
         self.tasks_minus_files()
-        self.files_minus_tasks()
+        #self.files_minus_tasks()
         
         if(detail == 0):
             self.response += 'task_list: %d' % (len(self.task_list))
@@ -223,12 +210,14 @@ class tasks:
             self.response += '\n'            
             self.response += '\n'            
             for task in self.task_list:
-                if(task.file_num != 1):
+                if(task.status == '?'):
                     self.response += task.infohashid
                     self.response += ':'
                     self.response += str(task.file_num)
                     self.response += ':'
                     self.response += task.file_list
+                    self.response += ':'
+                    self.response += task.status
                     self.response += '\n'
             self.response += '\n'
             for one_file in self.file_list:
@@ -236,6 +225,8 @@ class tasks:
                     self.response += one_file.full_name
                     self.response += ':'
                     self.response += str(one_file.task_num)
+                    self.response += ':'
+                    self.response += one_file.task_list
                     self.response += '\n'
         elif(detail == 1):
             self.response += 'task_list: %d' % (len(self.task_list))
@@ -249,12 +240,16 @@ class tasks:
                 self.response += str(task.file_num)
                 self.response += ':'
                 self.response += task.file_list
+                self.response += ':'
+                self.response += task.status
                 self.response += '\n'
             self.response += '\n'
             for one_file in self.file_list:
                 self.response += one_file.full_name
                 self.response += ':'
                 self.response += str(one_file.task_num)
+                self.response += ':'
+                self.response += one_file.task_list
                 self.response += '\n'
         else:
             self.response += 'unsupport detail: %d\n' % (detail)         

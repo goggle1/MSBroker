@@ -34,6 +34,7 @@ class check:
     NAME_7 = 'speed'
     NAME_8 = 'thread'
     NAME_9 = 'disk'
+    NAME_10 = 'log'    
     
     CMD_1 = 'ps -ef|grep mediaserver'
     CMD_2 = 'netstat -tlnp'
@@ -44,6 +45,7 @@ class check:
     CMD_7 = 'cat /home/mediaserver/etc/ms.conf | grep -E \"hvod_peer_max_speed|hvod_dld_max_speed|hvod_mp4head_max_speed|hvod_speed_fresh_interval|hvod_max_pending_package|hvod_free_speed_pos\"'
     CMD_8 = 'cat /home/mediaserver/etc/ms.conf | grep accepter_thread_num'
     CMD_9 = 'cat /home/mediaserver/etc/ms.conf | grep service_devices | grep -v service_devices_reload_interval'
+    CMD_10 = 'ls -l /root/clean_log.sh 2>/dev/null | wc -l; ls -l /home/mediaserver/log/peer_????????.log 2>/dev/null | wc -l; ls -l /home/mediaserver/log/peer_hvod_????????.log 2>/dev/null | wc -l'
     
 #     items = [ \
 #                check_item(NAME_1, CMD_1, 0, '', '', '', '', check_cmd_1), \
@@ -55,6 +57,7 @@ class check:
 #                check_item(NAME_7, CMD_7, 0, '', '', '', '', check_cmd_7), \
 #                check_item(NAME_8, CMD_8, 0, '', '', '', '', check_cmd_8), \
 #                check_item(NAME_9, CMD_9, 0, '', '', '', '', check_cmd_9), \
+#                check_item(NAME_10, CMD_10, 0, '', '', '', '', check_cmd_10), \
 #               ]
                 
     response = ''    
@@ -477,6 +480,39 @@ class check:
         
         return 0
     
+    
+    def check_cmd_10(self, item):   
+        item.expect = '%d\n%d\n%d\n' % (1, 7, 7)    
+        item.get = item.output
+           
+        lines = item.output.split('\n')            
+        if(len(lines) <= 3):
+            item.result= 'error'
+            return -1
+        clean_log_sh = lines[0]
+        peer_log     = lines[1]
+        peer_hvod_log  = lines[2]
+        
+        num1 = string.atoi(clean_log_sh) 
+        num2 = string.atoi(peer_log) 
+        num3 = string.atoi(peer_hvod_log) 
+        
+        item.result = 'ok'
+        
+        if(num1 != 1):
+            item.result = 'error'
+            return -1
+            
+        if(num2 > 8):
+            item.result = 'error'
+            return -1
+        
+        if(num3 > 8):
+            item.result = 'error'
+            return -1
+        
+        return 0
+    
         
     def check_output(self, item):
         result = 0
@@ -517,6 +553,7 @@ class check:
                check_item(NAME_7, CMD_7, 0, '', '', '', '', check_cmd_7), \
                check_item(NAME_8, CMD_8, 0, '', '', '', '', check_cmd_8), \
                check_item(NAME_9, CMD_9, 0, '', '', '', '', check_cmd_9), \
+               check_item(NAME_10, CMD_10, 0, '', '', '', '', check_cmd_10), \
               ]
     
     def check_item(self, item):
