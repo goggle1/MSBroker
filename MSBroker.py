@@ -1,5 +1,7 @@
+#!/home/ms_monitor/python272/bin/python
+'''
+#!/usr/bin/python
 #!/usr/local/bin/python
-'''#!/home/admin/broker_project/build_tools/python272/bin/python
 '''
 #-*- coding:utf-8 -*-
 
